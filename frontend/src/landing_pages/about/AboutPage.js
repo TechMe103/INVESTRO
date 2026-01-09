@@ -8,7 +8,7 @@ function AboutPage() {
         // <h1>AboutPage</h1>
         <>
             <Hero/>
-            <Team/>
+            {/* <Team/> */}
         </>
     );
 }
