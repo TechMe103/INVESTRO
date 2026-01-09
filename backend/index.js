@@ -3,13 +3,13 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const cors = require('cors');
-// const cookieParser = require("cookie-parser");
-
 const { HoldingsModel } = require('./model/HoldingsModel');
 const { PositionsModel } = require('./model/PositionsModel');
-
 const { OrdersModel } = require('./model/OrdersModel'); // Assuming you have an OrdersModel defined
+const JWT_SECRET = process.env.JWT_SECRET || 'abc123';
 
 
 
@@ -28,26 +28,47 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 
-
-
 // Middleware
 app.use(cors({
   origin: ["http://localhost:3000"], // Adjust this to your frontend URL
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 }));
-// app.use(express.json());
+
+//auth middleware
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "No token provided"
+    });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token"
+    });
+  }
+};
+
+// Use it in protected routes
+app.get('/protected-route', authMiddleware, (req, res) => {
+  res.json({ message: 'This is protected data', user: req.user });
+});
+
 
 
 app.use(bodyParser.json());
-// app.use(cookieParser());
 app.use(express.json());
 
- 
-// Routes
-// app.use("/", authRoute);
 
- 
 
 // app.use(express.json());
 
@@ -226,12 +247,13 @@ app.use(express.json());
 //   res.send("Done!");
 // });
 
-//*
+//get all holdings
 app.get("/allHoldings", async (req, res) => {
   let allHoldings = await HoldingsModel.find({});
   res.json(allHoldings);
 });
 
+//get all positions
 app.get("/allPositions", async (req, res) => {
   let allPositions = await PositionsModel.find({});
   res.json(allPositions);
@@ -255,40 +277,165 @@ app.post("/newOrder", async (req, res) => {
 // Signup route
 app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
+  
+  // Validation
   if (!name || !email || !password) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({ 
+      success: false,
+      message: "All fields are required" 
+    });
   }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter a valid email address"
+    });
+  }
+
+  // Password validation
+  if (password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 8 characters long"
+    });
+  }
+
   try {
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(409).json({ message: "Email already registered" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false,
+        message: "Email already registered" 
+      });
     }
-    const user = new User({ name, email, password });
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create new user
+    const user = new User({ 
+      name, 
+      email, 
+      password: hashedPassword 
+    });
+    
     await user.save();
-    res.status(201).json({ message: "Signup successful" });
+    
+    res.status(201).json({ 
+      success: true,
+      message: "Signup successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error('Signup error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error during signup" 
+    });
   }
 });
 
-// mongoose.connect(uri , {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true,
-// })
-// .then(() => {
-//   console.log("Connected to MongoDB");
-//   app.listen(PORT, () => {
-//     console.log(`Server is running on port ${PORT}`);
-//   });
-// })
-// .catch((err) => {
-//   console.error("MongoDB connection error:", err);
-// });
+// Login route
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  // Validation
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Email and password are required"
+    });
+  }
+
+  try {
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
+
+    // Compare passwords
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Successful login
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({
+      success: false,
+      message: "Server error during login"
+    });
+  }
+});
+
+// Check user authentication (optional - for protected routes)
+app.get('/check-auth', async (req, res) => {
+  // This would typically check for a token or session
+  // For now, returning a simple response
+  res.json({
+    authenticated: false,
+    message: "Authentication check endpoint"
+  });
+});
+
+// Get user profile (protected route example)
+app.get('/profile/:userId', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
     
+    res.json({
+      success: true,
+      user
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+});
 
-
-
-
+// Connect to MongoDB and start the server
 mongoose.connect(uri)
   .then(() => {
     console.log("Connected to MongoDB");
