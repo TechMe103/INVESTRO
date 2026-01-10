@@ -4,29 +4,70 @@ import { useNavigate, Link } from 'react-router-dom';
 function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = e => setForm({ ...form, [e.target.id.replace('input', '').toLowerCase()]: e.target.value });
 
+  // const handleSubmit = async e => {
+  //   e.preventDefault();
+  //   setError('');
+  //   setIsLoading(true);
+  //   try {
+  //     const res = await fetch('http://localhost:5000/login', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ email: form.email, password: form.password }),
+  //     });
+  //     if (res.ok) {
+  //       const data = await res.json();
+
+  //      // Save token
+  //       localStorage.setItem("token", data.token);
+
+  //      //Redirect to DASHBOARD APP (different React app)
+  //       window.location.href = "http://localhost:3000/";
+  //     } else {
+  //       const data = await res.json();
+  //       setError(data.message || 'Login failed');
+  //     }
+  //   } catch {
+  //     setError('Network error');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
   const handleSubmit = async e => {
-    e.preventDefault();
-    setError('');
-    try {
-      const res = await fetch('http://localhost:5000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
-      if (res.ok) {
-        navigate('/dashboard');
-      } else {
-        const data = await res.json();
-        setError(data.message || 'Login failed');
-      }
-    } catch {
-      setError('Network error');
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const res = await fetch('http://localhost:5000/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      localStorage.setItem("token", data.token);
+
+      //Redirect to dashboard app
+      window.location.href = "http://localhost:3001/";
+    } else {
+      setError(data.message || 'Login failed');
     }
-  };
+  } catch {
+    setError('Network error');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSignupRedirect = () => {
     navigate('/signup');
@@ -105,8 +146,26 @@ function Login() {
             </div>
 
             {/* Submit Button */}
-            <div className="d-grid gap-2 mb-4">
+            {/* <div className="d-grid gap-2 mb-4">
               <button type="submit" className="btn btn-primary btn-lg">Login</button>
+            </div> */}
+
+              {/* Submit Button */}
+            <div className="d-grid gap-2 mb-4">
+              <button 
+                type="submit" 
+                className="btn btn-primary btn-lg"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Logging in...
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </button>
             </div>
 
             {/* Divider */}

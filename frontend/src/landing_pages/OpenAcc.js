@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function OpenAcc() {
     return ( 
@@ -12,7 +13,7 @@ function OpenAcc() {
                     Modern platform for investing in stocks, ETFs, and cryptocurrencies, with a user-friendly interface and advanced trading tools.
                 </p>
                 
-                <button className= 'p-2 btn btn-primary' style={{width:"40%" , margin:"0 auto"}}>Signup Now</button>
+                <button className= 'p-2 btn btn-primary' style={{width:"40%" , margin:"0 auto"}} >Signup Now</button>
 
             </div>
         </div>

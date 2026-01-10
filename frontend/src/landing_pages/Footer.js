@@ -44,7 +44,7 @@ function Footer() {
                 </div>
             </div>
 
-            <p className='text-muted' style={{textAlign: 'center'}}><i class="fa-solid fa-heart"></i> Made by team Ctrl Alt Defeat</p>
+            <p className='text-muted' style={{textAlign: 'center'}}><i class="fa-regular fa-copyright"></i> 2025 Investro Broking Ltd. All rights reserved <i class="fa-solid fa-heart"></i></p>
         </div>
         </footer>
     );
