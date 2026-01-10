@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const { HoldingsModel } = require('./model/HoldingsModel');
 const { PositionsModel } = require('./model/PositionsModel');
-const { OrdersModel } = require('./model/OrdersModel'); // Assuming you have an OrdersModel defined
+const { OrdersModel } = require('./model/OrdersModel'); 
 const JWT_SECRET = process.env.JWT_SECRET || 'abc123';
 
 
@@ -232,7 +232,7 @@ app.get('/check-auth', async (req, res) => {
   });
 });
 
-// Get user profile (protected route example)
+// Get user profile 
 app.get('/profile/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).select('-password');
